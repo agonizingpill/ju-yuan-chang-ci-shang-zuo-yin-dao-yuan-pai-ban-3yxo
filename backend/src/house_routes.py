@@ -3,11 +3,11 @@ from sqlalchemy import select
 from .db import db_session
 from .auth import current,writers,admin
 from .zone_models import EntranceZone,ZonePost
-from .incident_models import HouseIncident
+from .incident_models import HouseIncident,IncidentCase
 from .lost_models import LostItem,ItemClaim
-from .house_schemas import ZoneInput,PostInput,IncidentInput,DispatchInput,ResolutionInput,LostInput,ClaimInput
+from .house_schemas import ZoneInput,PostInput,IncidentInput,DispatchInput,ResolutionInput,CaseInput,CaseMembersInput,CaseCloseInput,LostInput,ClaimInput
 from .services import pack
-from . import zones_service as zones,incidents_service as incidents,lost_service as lost
+from . import zones_service as zones,incidents_service as incidents,lost_service as lost,cases_service as cases
 router=APIRouter()
 @router.get('/entrance-zones')
 def list_zones(s=Depends(db_session),u=Depends(current)):return [pack(x) for x in s.scalars(select(EntranceZone).order_by(EntranceZone.id))]
@@ -33,6 +33,20 @@ def resolve(id:int,d:ResolutionInput,s=Depends(db_session),u=Depends(writers)):
 @router.post('/house-incidents/{id}/close')
 def close(id:int,s=Depends(db_session),u=Depends(admin)):
     x=incidents.close(s,id,u);s.commit();return x
+@router.get('/incident-cases')
+def list_cases(s=Depends(db_session),u=Depends(current)):return [cases.case_view(s,x) for x in s.scalars(select(IncidentCase).order_by(IncidentCase.id.desc()))]
+@router.post('/incident-cases')
+def create_case(d:CaseInput,s=Depends(db_session),u=Depends(admin)):
+    x=cases.create(s,d,u);s.commit();return x
+@router.post('/incident-cases/{id}/members')
+def append_members(id:int,d:CaseMembersInput,s=Depends(db_session),u=Depends(admin)):
+    x=cases.append(s,id,d,u);s.commit();return x
+@router.post('/incident-cases/{id}/resolve')
+def resolve_case(id:int,d:ResolutionInput,s=Depends(db_session),u=Depends(writers)):
+    x=cases.resolve(s,id,d,u);s.commit();return x
+@router.post('/incident-cases/{id}/close')
+def close_case(id:int,d:CaseCloseInput,s=Depends(db_session),u=Depends(admin)):
+    x=cases.close(s,id,d,u);s.commit();return x
 @router.get('/lost-items')
 def items(s=Depends(db_session),u=Depends(current)):return [lost.view(x,u) for x in s.scalars(select(LostItem).order_by(LostItem.id.desc()))]
 @router.post('/lost-items')

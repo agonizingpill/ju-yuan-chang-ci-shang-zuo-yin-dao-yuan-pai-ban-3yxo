@@ -18,6 +18,14 @@ class DispatchInput(BaseModel):
     assignment_id:int
 class ResolutionInput(BaseModel):
     resolution:str=Field(min_length=8,max_length=2000,pattern=r'\S')
+class CaseInput(BaseModel):
+    performance_id:int
+    coordinator_id:int
+    incident_ids:list[int]=Field(min_length=2)
+class CaseMembersInput(BaseModel):
+    incident_ids:list[int]=Field(min_length=1)
+class CaseCloseInput(BaseModel):
+    expected_revision:int=Field(ge=1)
 class LostInput(BaseModel):
     performance_id:int
     code:str=Field(min_length=3,max_length=50,pattern=r'\S')

@@ -108,6 +108,18 @@ seed另有16名场务、1名停用示例，以及“交接演练·夜场”11-17
 
 `zone_models.py`、`incident_models.py`、`lost_models.py`保存五张独立关系表；`zones_service.py`、`incidents_service.py`、`lost_service.py`实现容量/岗位、事件升级和唯一交付；`house_schemas.py`与`house_routes.py`提供请求/权限/事务。`debrief_service.py`对新保存检查岗位，对新归档检查高风险事件；无历史回填、原表无新增列。前端 `pages/zones.js`、`incidents.js`、`lost.js`三页共享 `utils/house.js` 的场次选择，保留原六页。事件枚举在前后端constants。
 
+## 事件归宗整案（第四轮扩展）
+
+10. 事件归宗：同一险情跨入口重复上报时，经理把本场至少两条未关闭事件合为一宗IncidentCase，并指定本场已实名到岗的CrewAssignment统筹。IncidentCaseMember唯一约束保证一条事件只入一宗；成员原发生入口、风险、分派与处置记录全部留存，归宗后拒绝单独分派、处置或关闭，宗风险取成员最高级。处置中（未结案）可追加本场未归宗报告，追加后宗回到处置中、版本号+1，原结案核对失效。经理按当前成员和整宗处置说明结案：结案请求携带核对版本，版本不符即过期拒绝；结案时成员同步closed并记录结案人。高风险宗未结案与高风险单事件一样拦截交接归档。归宗、追加、结案与单事件处置、交接归档并发时以行锁串行，任一失败整体回滚保留原状，重试不重复归宗或关闭。事件页可查每宗成员原始证据、统筹人、待处理与已结案。
+
+|接口|权限|
+|---|---|
+|GET /incident-cases|三角色读取，含成员原始证据与统筹人|
+|POST /incident-cases、/{id}/members、/{id}/close|仅admin归宗、追加与整宗结案；结案须带expected_revision|
+|POST /incident-cases/{id}/resolve|admin/steward登记整宗处置说明|
+
+`incident_models.py`新增IncidentCase/IncidentCaseMember两张独立关系表，原表无新增列、无历史回填；`cases_service.py`实现归宗、追加、整宗处置与结案，`incidents_service.py`的ensure_clear同时检查高风险宗。宗状态枚举CASE_STATES（open处置中/resolved待结案/closed已结案）在前后端constants。当前范围：宗不拆分、不移除成员，统筹人不可更换；重复上报的识别由经理人工判断，不做文本自动合并。
+
 seed为交接演练夜场/午场分别提供EAST/WEST各80容量、最低1岗；不自动分配岗位。剧本：到岗人员沈青/唐禾分别安排两区→登记拥堵高风险→经理分派→现场说明→经理关闭→散场归档；西入口拾到棕色钱包→登记不公开特征→认领人提供描述→经理核对交付。反复seed不覆盖人工岗位、事件处置、认领凭据或原交接。
 
 当前范围：分区配置为固定记录，无临时撤岗/跨区调度/分区删除；要求的最低人数由经理给定。事件不通知外部医疗或安保，不是紧急呼救系统；处置由场务角色代录，未对齐个人登录身份。失物凭据按去首尾空白、不区分字母大小写的完整特征文本匹配，用于演示经理核对，无证件/照片识别或外部认领消息；认领姓名/凭据留本地数据库。原人工签到和运营演练数据范围继续适用。新证据在 `test-artifacts/gb-1025/v3/`。

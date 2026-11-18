@@ -5,4 +5,5 @@ CALL_STATES=('proposed','confirmed','invalidated')
 DEBRIEF_STATES=('draft','archived')
 
 INCIDENT_STATES=('open','assigned','resolved','closed')
+CASE_STATES=('open','resolved','closed')
 ITEM_STATES=('stored','handed_over')
